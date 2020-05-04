@@ -15,6 +15,7 @@ pygame.display.set_icon(icon)
 pygame.display.set_caption('Tanks 2D')
 
 background = pygame.image.load('res/ground.jpg')
+wall_image = pygame.image.load('res/wall.png')
 
 sound_col = pygame.mixer.Sound('res/collision.wav')
 sound_col.set_volume(0.2)
@@ -89,7 +90,7 @@ class Bullet:
 ##########################################    Tanks    ##########################################
 
 
-max_lifes = 3
+max_lifes = 10
 
 
 class Tank:
@@ -131,7 +132,7 @@ class Tank:
         self.direction = direction
 
     def move(self, sec):
-        global tanks
+        global tanks, walls
         if not self.is_static:
             dx = 0
             dy = 0
@@ -156,9 +157,26 @@ class Tank:
                 if self.y + dy > screen.get_size()[1]:
                     dy = -self.y - self.width
 
-            if not any([pygame.Rect(self.x + dx, self.y + dy, self.width, self.width).colliderect(pygame.Rect(tank.x, tank.y, tank.width, tank.width)) for tank in tanks if self != tank]):
-                self.x, self.y = self.x + dx, self.y + dy
+            future_pos = pygame.Rect(self.x + dx, self.y + dy, self.width, self.width)
+            if not any([future_pos.colliderect(pygame.Rect(tank.x, tank.y, tank.width, tank.width)) 
+                        for tank in tanks if self != tank]):
+                if not any([future_pos.colliderect(pygame.Rect(wall.coord, wall.image.get_size())) 
+                            for wall in walls]):
+                    self.x, self.y = self.x + dx, self.y + dy
         self.draw()
+
+
+########################################## Walls ##########################################
+
+
+class Wall:
+    
+    def __init__(self, coord):
+        self.image = wall_image
+        self.coord = coord
+    
+    def draw(self):
+        screen.blit(self.image, self.coord)
 
 
 ########################################## Buutons ##########################################
@@ -213,8 +231,10 @@ def checkCollisions(bullet):
 menuloop = True
 mainloop = True
 gamemode = ''
+repeat = False
 tanks = []
 bullets = []
+walls = []
 
 clock = pygame.time.Clock()
 FPS = 60
@@ -267,13 +287,28 @@ def menu():
 
 
 def single():
-    global mainloop, clock, bullets, tanks
-    arys = Tank(700, 300, 800//6, (3, 102, 6), fire=pygame.K_RETURN)
-    era = Tank(100, 300, 800//6, (135, 101, 26), pygame.K_d, pygame.K_a, pygame.K_w, pygame.K_s)
+    global mainloop, clock, bullets, tanks, walls
+    spawnpoints = []
+    with open('res/maps/map1.txt') as map:
+        lines = map.readlines()
+        i = 0
+        for line in lines:
+            j = 0
+            for symb in line:
+                if symb == '#':
+                    walls.append(Wall([j*32, i*32]))
+                elif symb == '@':
+                    spawnpoints.append([j*32, i*32])
+                j += 1
+            i += 1
+                
+
+    tank1 = Tank(spawnpoints[0][0], spawnpoints[0][1], 800//6, (3, 102, 6), fire=pygame.K_RETURN)
+    tank2 = Tank(spawnpoints[1][0], spawnpoints[1][1], 800//6, (135, 101, 26), pygame.K_d, pygame.K_a, pygame.K_w, pygame.K_s)
     # tank3 = Tank(100, 100, 800//6, (0, 0, 0xff), pygame.K_h, pygame.K_f, pygame.K_t, pygame.K_g, pygame.K_2)
     # tank4 = Tank(100, 200, 800//6, (0xff, 255, 0), pygame.K_l, pygame.K_j, pygame.K_i, pygame.K_k, pygame.K_3)
 
-    tanks += [arys, era]
+    tanks += [tank1, tank2]
 
     while mainloop:
         millis = clock.tick(FPS)
@@ -302,8 +337,12 @@ def single():
                 
         screen.fill((255 ,255, 255))
         # screen.blit(background, (0, 0))
+        for wall in walls:
+            wall.draw()
+
         for tank in tanks:
             tank.move(seconds)
+
         for i in range(len(bullets)):
             if i >= len(bullets): break
             bullets[i].move(seconds)
@@ -313,5 +352,6 @@ def single():
 
 menu()
 if gamemode == 's': single()
+# while repeat: menu()
 
 pygame.quit()
