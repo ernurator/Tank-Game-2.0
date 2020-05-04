@@ -296,7 +296,7 @@ def menu():
         pygame.display.flip()
 
 
-##########################################    Main loop    ##########################################
+##########################################    Restart loop    ##########################################
 
 
 def again(winner=''):
@@ -334,6 +334,8 @@ def again(winner=''):
                     rep_loop = False
                     repeat = True
 
+
+##########################################    Main loop    ##########################################
 
 
 def single():
@@ -412,6 +414,10 @@ def single():
             winner = tanks[0]
             game_over = True
             mainloop = False
+
+
+##########################################    Game launch    ##########################################
+
 
 while repeat:
     repeat = False
