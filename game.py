@@ -1,5 +1,6 @@
 import pygame
 from enum import Enum
+import random
 #pylint: disable=no-member
 
 pygame.init()
@@ -16,6 +17,7 @@ pygame.display.set_caption('Tanks 2D')
 
 background = pygame.image.load('res/ground.jpg')
 wall_image = pygame.image.load('res/wall.png')
+box_image = pygame.image.load('res/box.png')
 
 sound_col = pygame.mixer.Sound('res/collision.wav')
 sound_col.set_volume(0.2)
@@ -44,7 +46,7 @@ class Bullet:
         self.width = 4
         self.height = 8
         self.direction = tank.direction
-        self.speed = 500
+        self.speed = int(tank.speed * 3.75)
         self.lifetime = 0
         self.destroytime = 3  # seconds
         if tank.direction == Direction.RIGHT:
@@ -99,6 +101,8 @@ class Tank:
         self.x = x
         self.y = y
         self.speed = speed
+        self.countdown = 0
+        self.power_up = False
         self.color = color
         self.width = 32
         self.lifes = max_lifes
@@ -131,8 +135,14 @@ class Tank:
     def changeDirection(self, direction):
         self.direction = direction
 
-    def move(self, sec):
+    def move(self, sec, box):
         global tanks, walls
+        if self.countdown > 0:
+            self.countdown -= sec
+        if self.power_up and self.countdown <= 0:
+            self.power_up = False
+            self.speed = self.speed // 2
+
         if not self.is_static:
             dx = 0
             dy = 0
@@ -157,16 +167,26 @@ class Tank:
                 if self.y + dy > screen.get_size()[1]:
                     dy = -self.y - self.width
 
+            # Other tanks
             future_pos = pygame.Rect(self.x + dx, self.y + dy, self.width, self.width)
             if not any([future_pos.colliderect(pygame.Rect(tank.x, tank.y, tank.width, tank.width)) 
                         for tank in tanks if self != tank]):
                     self.x, self.y = self.x + dx, self.y + dy
 
+            # Walls
             for i in range(len(walls)):
                 if future_pos.colliderect(pygame.Rect(walls[i].coord, walls[i].image.get_size())):
                     del walls[i]
                     self.lifes -= 1
                     break
+
+            # Power box
+            if future_pos.colliderect(pygame.Rect(box.coord, box.image.get_size())) and box.is_active:
+                box.is_active = False
+                self.speed *= 2
+                self.countdown = 5
+                self.power_up = True
+
         self.draw()
 
 
@@ -178,6 +198,25 @@ class Wall:
     def __init__(self, coord):
         self.image = wall_image
         self.coord = coord
+    
+    def draw(self):
+        screen.blit(self.image, self.coord)
+
+
+########################################## Power box ##########################################
+
+
+class Box:
+    def __init__(self):
+        self.image = box_image
+        self.is_active = False
+        self.wait = 0
+        self.newBox()
+
+    def newBox(self):
+        global free_spaces
+        self.reload = 7 + random.random() * 5 # 7 - 12 seconds
+        self.coord = random.choice(free_spaces)
     
     def draw(self):
         screen.blit(self.image, self.coord)
@@ -246,6 +285,7 @@ game_over = False
 tanks = []
 bullets = []
 walls = []
+free_spaces = []
 winner = ''
 
 clock = pygame.time.Clock()
@@ -351,6 +391,8 @@ def single():
                     walls.append(Wall([j*32, i*32]))
                 elif symb == '@':
                     spawnpoints.append([j*32, i*32])
+                elif symb == '_':
+                    free_spaces.append([j*32, i*32])
                 j += 1
             i += 1
 
@@ -361,6 +403,7 @@ def single():
     # tank4 = Tank(100, 200, 800//6, (0xff, 255, 0), pygame.K_l, pygame.K_j, pygame.K_i, pygame.K_k, pygame.K_3)
 
     tanks += [tank1, tank2]
+    box = Box()
 
     mainloop = True
     while mainloop:
@@ -393,16 +436,24 @@ def single():
         for wall in walls:
             wall.draw()
 
+        if box.is_active: box.draw()
+        elif box.wait < box.reload: box.wait += seconds
+        else:
+            box.newBox()
+            box.wait = 0
+            box.is_active = True
+
         for i in range(len(tanks)):
-            tanks[i].move(seconds)
+            tanks[i].move(seconds, box)
             if tanks[i].lifes <= 0:
                 del tanks[i]
                 break
 
         for i in range(len(bullets)):
-            if i >= len(bullets): break
             bullets[i].move(seconds)
-            if checkCollisions(bullets[i]) or bullets[i].lifetime > bullets[i].destroytime: del bullets[i]
+            if checkCollisions(bullets[i]) or bullets[i].lifetime > bullets[i].destroytime:
+                del bullets[i]
+                break
 
         pygame.display.flip()
 
