@@ -160,9 +160,13 @@ class Tank:
             future_pos = pygame.Rect(self.x + dx, self.y + dy, self.width, self.width)
             if not any([future_pos.colliderect(pygame.Rect(tank.x, tank.y, tank.width, tank.width)) 
                         for tank in tanks if self != tank]):
-                if not any([future_pos.colliderect(pygame.Rect(wall.coord, wall.image.get_size())) 
-                            for wall in walls]):
                     self.x, self.y = self.x + dx, self.y + dy
+
+            for i in range(len(walls)):
+                if future_pos.colliderect(pygame.Rect(walls[i].coord, walls[i].image.get_size())):
+                    del walls[i]
+                    self.lifes -= 1
+                    break
         self.draw()
 
 
@@ -213,7 +217,13 @@ class Button:
 
 
 def checkCollisions(bullet):
-    global tanks
+    global tanks, walls
+    pos = pygame.Rect(bullet.x, bullet.y, bullet.width, bullet.height)
+    for i in range(len(walls)):
+        if pos.colliderect(pygame.Rect(walls[i].coord, walls[i].image.get_size())):
+            del walls[i]
+            return True
+            
     for i in range(len(tanks)):
         dist_x = bullet.x - tanks[i].x
         dist_y = bullet.y - tanks[i].y
@@ -340,8 +350,11 @@ def single():
         for wall in walls:
             wall.draw()
 
-        for tank in tanks:
-            tank.move(seconds)
+        for i in range(len(tanks)):
+            tanks[i].move(seconds)
+            if tanks[i].lifes <= 0:
+                del tanks[i]
+                break
 
         for i in range(len(bullets)):
             if i >= len(bullets): break
