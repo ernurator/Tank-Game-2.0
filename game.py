@@ -26,6 +26,7 @@ sound_shoot = pygame.mixer.Sound('res/shoot.wav')
 sound_shoot.set_volume(0.2)
 
 font = pygame.font.SysFont('Courier', 24, bold=True)
+big_font = pygame.font.SysFont('Courier', 36, bold=True)
 
 class Direction(Enum):
     UP = 1
@@ -305,12 +306,14 @@ def start(txt):
 
 def menu():
     global clock, menuloop, gamemode
+    hello_text = 'Tanks 2D'
+    hello_text = big_font.render(hello_text, True, (50, 50, 50))
     buttons = []
-    single = Button('Single player', 100, 100, font, (0, 0, 0), (10, 200, 10), start)
+    single = Button('Single player', 100, 500, font, (0, 0, 0), (10, 200, 10), start)
     buttons.append(single)
-    multi = Button('Multiplayer', 300, 100, font, (0, 0, 0), (10, 200, 10), start)
+    multi = Button('Multiplayer', 330, 500, font, (0, 0, 0), (10, 200, 10), start)
     buttons.append(multi)
-    auto = Button('Autoplay', 500, 100, font, (0, 0, 0), (10, 200, 10), start)
+    auto = Button('Autoplay', 550, 500, font, (0, 0, 0), (10, 200, 10), start)
     buttons.append(auto)
     
     menuloop = True
@@ -330,6 +333,7 @@ def menu():
                         gamemode = button.run(button.text)
                 
         screen.fill((255 ,255, 255))
+        screen.blit(hello_text, (screen.get_size()[0] // 2 - hello_text.get_size()[0] // 2, 200))
         for button in buttons:
             button.draw()
 
@@ -476,6 +480,8 @@ while repeat:
     game_over = False
     tanks = []
     bullets = []
+    walls = []
+    free_spaces = []
     winner = ''
     menu()
     if gamemode == 's': single()
