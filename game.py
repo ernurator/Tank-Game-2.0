@@ -27,6 +27,7 @@ sound_shoot.set_volume(0.2)
 
 font = pygame.font.SysFont('Courier', 24, bold=True)
 big_font = pygame.font.SysFont('Courier', 36, bold=True)
+small_font = pygame.font.SysFont('Courier', 16, bold=True)
 
 class Direction(Enum):
     UP = 1
@@ -107,6 +108,7 @@ class Tank:
         self.color = color
         self.width = 32
         self.lifes = max_lifes
+        self.score = 0
         self.direction = Direction.RIGHT
         self.is_static = True
         self.fire_key = fire
@@ -115,22 +117,22 @@ class Tank:
 
     def draw(self):
         tank_c = (self.x + self.width // 2, self.y + self.width // 2)
-        dynamic = tuple(int(i * self.lifes / max_lifes) for i in self.color)
-        pygame.draw.rect(screen, dynamic, (self.x, self.y, self.width, self.width))
-        pygame.draw.circle(screen, dynamic, tank_c, self.width // 2)
+        # dynamic = tuple(int(i * self.lifes / max_lifes) for i in self.color)
+        pygame.draw.rect(screen, self.color, (self.x, self.y, self.width, self.width))
+        pygame.draw.circle(screen, self.color, tank_c, self.width // 2)
         pygame.draw.circle(screen, (0, 0, 0), tank_c, self.width // 2 - 1, 1)
 
         if self.direction == Direction.RIGHT:
-            pygame.draw.line(screen, dynamic, tank_c, (self.x + 3*self.width//2, self.y + self.width//2), 4)
+            pygame.draw.line(screen, self.color, tank_c, (self.x + 3*self.width//2, self.y + self.width//2), 4)
         
         if self.direction == Direction.LEFT:
-            pygame.draw.line(screen, dynamic, tank_c, (self.x - self.width//2, self.y + self.width//2), 4)
+            pygame.draw.line(screen, self.color, tank_c, (self.x - self.width//2, self.y + self.width//2), 4)
         
         if self.direction == Direction.UP:
-            pygame.draw.line(screen, dynamic, tank_c, (self.x + self.width//2, self.y - self.width//2), 4)
+            pygame.draw.line(screen, self.color, tank_c, (self.x + self.width//2, self.y - self.width//2), 4)
 
         if self.direction == Direction.DOWN:
-            pygame.draw.line(screen, dynamic, tank_c, (self.x + self.width//2, self.y + 3*self.width//2), 4)
+            pygame.draw.line(screen, self.color, tank_c, (self.x + self.width//2, self.y + 3*self.width//2), 4)
 
 
     def changeDirection(self, direction):
@@ -223,7 +225,7 @@ class Box:
         screen.blit(self.image, self.coord)
 
 
-########################################## Buutons ##########################################
+########################################## Buttons ##########################################
 
 
 class Button:
@@ -269,6 +271,7 @@ def checkCollisions(bullet):
         dist_y = bullet.y - tanks[i].y
         if -bullet.width <= dist_x <= tanks[i].width and -bullet.height <= dist_y <= tanks[i].width and bullet.tank != tanks[i]:
             sound_col.play()
+            bullet.tank.score += 1
             tanks[i].lifes -= 1
             if tanks[i].lifes <= 0: del tanks[i]
             return True
@@ -458,6 +461,10 @@ def single():
             if checkCollisions(bullets[i]) or bullets[i].lifetime > bullets[i].destroytime:
                 del bullets[i]
                 break
+
+        for i in range(len(tanks)):
+            txt = small_font.render(f'Tank {i + 1}: {tanks[i].lifes} lifes, {tanks[i].score} points', True, (0, 0, 0))
+            screen.blit(txt, (5, i*txt.get_size()[1] + 5))
 
         pygame.display.flip()
 
