@@ -241,10 +241,12 @@ def checkCollisions(bullet):
 menuloop = True
 mainloop = True
 gamemode = ''
-repeat = False
+repeat = True
+game_over = False
 tanks = []
 bullets = []
 walls = []
+winner = ''
 
 clock = pygame.time.Clock()
 FPS = 60
@@ -270,7 +272,8 @@ def menu():
     buttons.append(multi)
     auto = Button('Autoplay', 500, 100, font, (0, 0, 0), (10, 200, 10), start)
     buttons.append(auto)
-
+    
+    menuloop = True
     while menuloop:
         clock.tick(FPS)
         for event in pygame.event.get():
@@ -296,8 +299,45 @@ def menu():
 ##########################################    Main loop    ##########################################
 
 
+def again(winner=''):
+    global repeat
+    screen.fill((255, 255, 255))
+    if winner != '':
+        text = font.render('Congrats! Winner: ', True, (10, 10, 10))
+        x = screen.get_size()[0] // 2 - text.get_size()[0] // 2 - winner.width // 2
+        y = screen.get_size()[1] // 2 - text.get_size()[1] // 2 - winner.width // 2
+        winner.x = text.get_size()[0] + x
+        winner.y = y
+        winner.draw()
+    else:
+        text = font.render("It's a draw!", True, (10, 10, 10))
+        x = screen.get_size()[0] // 2 - text.get_size()[0] // 2
+        y = screen.get_size()[1] // 2 - text.get_size()[1] // 2
+
+    text1 = font.render('Press R to play again', True, (200, 200, 200))
+    x1 = screen.get_size()[0] // 2 - text1.get_size()[0] // 2
+    y1 = y + text.get_size()[1] + 10
+    screen.blit(text, (x, y))
+    screen.blit(text1, (x1, y1))
+    pygame.display.flip()
+    
+    rep_loop = True
+    while rep_loop:
+        clock.tick(FPS)
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                rep_loop = False
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    rep_loop = False
+                if event.key == pygame.K_r:
+                    rep_loop = False
+                    repeat = True
+
+
+
 def single():
-    global mainloop, clock, bullets, tanks, walls
+    global mainloop, clock, bullets, tanks, walls, winner, game_over
     spawnpoints = []
     with open('res/maps/map1.txt') as map:
         lines = map.readlines()
@@ -311,7 +351,7 @@ def single():
                     spawnpoints.append([j*32, i*32])
                 j += 1
             i += 1
-                
+
 
     tank1 = Tank(spawnpoints[0][0], spawnpoints[0][1], 800//6, (3, 102, 6), fire=pygame.K_RETURN)
     tank2 = Tank(spawnpoints[1][0], spawnpoints[1][1], 800//6, (135, 101, 26), pygame.K_d, pygame.K_a, pygame.K_w, pygame.K_s)
@@ -320,6 +360,7 @@ def single():
 
     tanks += [tank1, tank2]
 
+    mainloop = True
     while mainloop:
         millis = clock.tick(FPS)
         seconds = millis / 1000
@@ -363,8 +404,25 @@ def single():
 
         pygame.display.flip()
 
-menu()
-if gamemode == 's': single()
-# while repeat: menu()
+        if len(tanks) == 0:
+            winner = ''
+            game_over = True
+            mainloop = False
+        if len(tanks) == 1:
+            winner = tanks[0]
+            game_over = True
+            mainloop = False
+
+while repeat:
+    repeat = False
+    gamemode = ''
+    game_over = False
+    tanks = []
+    bullets = []
+    winner = ''
+    menu()
+    if gamemode == 's': single()
+    # ...
+    if game_over: again(winner)
 
 pygame.quit()
