@@ -27,7 +27,7 @@ sound_shoot = pygame.mixer.Sound('res/shoot.wav')
 sound_shoot.set_volume(0.2)
 
 font = pygame.font.SysFont('Courier', 24, bold=True)
-big_font = pygame.font.SysFont('Courier', 48, bold=True)
+big_font = pygame.font.SysFont('Courier', 56, bold=True)
 small_font = pygame.font.SysFont('Courier', 16, bold=True)
 
 class Direction(Enum):
@@ -336,7 +336,7 @@ def menu():
                             button.button_y <= pos[1] <= button.button_y + button.button_h):
                         gamemode = button.run(button.text)
                 
-        screen.blit(poster, (-80, 0))
+        screen.blit(poster, (-80, -80))
         screen.blit(hello_text, (screen.get_size()[0] // 2 - hello_text.get_size()[0] // 2, 80))
         for button in buttons:
             button.draw()
@@ -439,7 +439,7 @@ def single():
             if stay:
                 tank.is_static = True
                 
-        screen.fill((225, 235, 250))
+        screen.fill((201, 175, 135)) # 225, 235, 250
         # screen.blit(background, (0, 0))
         for wall in walls:
             wall.draw()
