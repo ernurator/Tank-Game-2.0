@@ -11,14 +11,14 @@ pygame.mixer.init()
 
 
 screen = pygame.display.set_mode((800, 640))
-icon = pygame.image.load('res/war.png')
+icon = pygame.image.load('res/icon.png')
 pygame.display.set_icon(icon)
 pygame.display.set_caption('Tanks 2D')
 
 # background = pygame.image.load('res/')
 poster = pygame.image.load('res/poster.jpg')
 wall_image = pygame.image.load('res/wall.png')
-box_image = pygame.image.load('res/box.png')
+box_image = pygame.image.load('res/box.tga')
 
 explosion_sound = pygame.mixer.Sound('res/explosion.ogg')
 explosion_sound.set_volume(0.2)
@@ -191,7 +191,7 @@ class Tank:
                     break
 
             # Power box
-            if future_pos.colliderect(pygame.Rect(box.coord, box.image.get_size())) and box.is_active:
+            if future_pos.colliderect(pygame.Rect(box.coord, box.size)) and box.is_active:
                 box.is_active = False
                 self.speed *= 2
                 self.countdown = 5
@@ -200,7 +200,7 @@ class Tank:
         self.draw()
 
 
-########################################## Walls ##########################################
+##########################################    Walls    ##########################################
 
 
 class Wall:
@@ -213,12 +213,18 @@ class Wall:
         screen.blit(self.image, self.coord)
 
 
-########################################## Power box ##########################################
+##########################################    Power box    ##########################################
 
 
 class Box:
-    def __init__(self):
-        self.image = box_image
+    def __init__(self, interval):
+        self.interval = interval
+        self.images = []
+        self.size = [32, 32]
+        for i in range(box_image.get_size()[1] // self.size[1]):
+            for j in range(box_image.get_size()[0] // self.size[0]):
+                self.images.append(box_image.subsurface(j*self.size[0], i*self.size[1], self.size[0], self.size[1]))
+        self.cur_image = 0
         self.is_active = False
         self.wait = 0
         self.newBox()
@@ -229,10 +235,10 @@ class Box:
         self.coord = random.choice(free_spaces)
     
     def draw(self):
-        screen.blit(self.image, self.coord)
+        screen.blit(self.images[self.cur_image], self.coord)
 
 
-########################################## Buttons ##########################################
+##########################################    Buttons    ##########################################
 
 
 class Button:
@@ -424,7 +430,8 @@ def single():
     # tank4 = Tank(100, 200, 800//6, (0xff, 255, 0), pygame.K_l, pygame.K_j, pygame.K_i, pygame.K_k, pygame.K_3)
 
     tanks += [tank1, tank2]
-    box = Box()
+    box = Box(0.05)
+    cycle = 0
 
     mainloop = True
     while mainloop:
@@ -457,7 +464,13 @@ def single():
         for wall in walls:
             wall.draw()
 
-        if box.is_active: box.draw()
+        if box.is_active:
+            box.draw()
+            cycle += seconds
+            if cycle >= box.interval:
+                cycle = 0
+                box.cur_image += 1
+                box.cur_image %= len(box.images)
         elif box.wait < box.reload: box.wait += seconds
         else:
             box.newBox()
