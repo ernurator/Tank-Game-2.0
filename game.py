@@ -15,16 +15,22 @@ icon = pygame.image.load('res/war.png')
 pygame.display.set_icon(icon)
 pygame.display.set_caption('Tanks 2D')
 
-background = pygame.image.load('res/ground.jpg')
+# background = pygame.image.load('res/')
 poster = pygame.image.load('res/poster.jpg')
 wall_image = pygame.image.load('res/wall.png')
 box_image = pygame.image.load('res/box.png')
 
-sound_col = pygame.mixer.Sound('res/collision.wav')
-sound_col.set_volume(0.2)
+explosion_sound = pygame.mixer.Sound('res/explosion.ogg')
+explosion_sound.set_volume(0.2)
 
-sound_shoot = pygame.mixer.Sound('res/shoot.wav')
-sound_shoot.set_volume(0.2)
+shoot_sound = pygame.mixer.Sound('res/bullet.ogg')
+shoot_sound.set_volume(0.1)
+
+button_sound = pygame.mixer.Sound('res/button.wav')
+button_sound.set_volume(0.2)
+
+# wall_sound = pygame.mixer.Sound('res/walls.ogg')
+# wall_sound.set_volume(0.1)
 
 font = pygame.font.SysFont('Courier', 24, bold=True)
 big_font = pygame.font.SysFont('Courier', 56, bold=True)
@@ -43,7 +49,7 @@ class Direction(Enum):
 class Bullet:
 
     def __init__(self, tank):
-        sound_shoot.play()
+        shoot_sound.play(maxtime=1600)
         self.tank = tank
         # self.color = tank.color
         self.width = 4
@@ -231,9 +237,10 @@ class Box:
 
 class Button:
 
-    def __init__(self, text, button_x, button_y, font, txt_col, colour, func, size='auto',
+    def __init__(self, text, button_x, button_y, font, txt_col, colour, act_colour, func, size='auto',
                  color_per=(74, 72, 70)):
         global screen
+        self.is_active = False
         self.text = text
         self.button_x = button_x
         self.button_y = button_y
@@ -241,6 +248,7 @@ class Button:
         self.txt = font.render(str(text), True, txt_col)
         self.txt_col = txt_col
         self.colour = colour
+        self.act_colour = act_colour
         self.color_per = color_per
         self.run = func
         w, h = self.txt.get_size()
@@ -251,7 +259,8 @@ class Button:
 
     def draw(self):
         # self.txt = self.font.render(str(self.text), True, self.txt_col)
-        pygame.draw.rect(screen, self.colour, (self.button_x, self.button_y, self.button_w, self.button_h))
+        colour = self.colour if not self.is_active else self.act_colour
+        pygame.draw.rect(screen, colour, (self.button_x, self.button_y, self.button_w, self.button_h))
         pygame.draw.rect(screen, self.color_per, (self.button_x, self.button_y, self.button_w, self.button_h), 2)
         screen.blit(self.txt, (self.txt_x, self.txt_y))
 
@@ -264,6 +273,7 @@ def checkCollisions(bullet):
     pos = pygame.Rect(bullet.x, bullet.y, bullet.width, bullet.height)
     for i in range(len(walls)):
         if pos.colliderect(pygame.Rect(walls[i].coord, walls[i].image.get_size())):
+            # wall_sound.play(fade_ms=1700)
             del walls[i]
             return True
             
@@ -271,7 +281,7 @@ def checkCollisions(bullet):
         dist_x = bullet.x - tanks[i].x
         dist_y = bullet.y - tanks[i].y
         if -bullet.width <= dist_x <= tanks[i].width and -bullet.height <= dist_y <= tanks[i].width and bullet.tank != tanks[i]:
-            sound_col.play()
+            explosion_sound.play()
             bullet.tank.score += 1
             tanks[i].lifes -= 1
             if tanks[i].lifes <= 0: del tanks[i]
@@ -301,6 +311,7 @@ FPS = 60
 
 
 def start(txt):
+    button_sound.play()
     global menuloop
     menuloop = False
     if txt == 'Single player': return 's'
@@ -313,11 +324,11 @@ def menu():
     hello_text = 'Tanks 2D'
     hello_text = big_font.render(hello_text, True, (50, 50, 50))
     buttons = []
-    single = Button('Single player', 100, 500, font, (0, 0, 0), (10, 200, 10), start)
+    single = Button('Single player', 100, 500, font, (0, 0, 0), (10, 200, 10), (6, 128, 6), start)
     buttons.append(single)
-    multi = Button('Multiplayer', 330, 500, font, (0, 0, 0), (10, 200, 10), start)
+    multi = Button('Multiplayer', 330, 500, font, (0, 0, 0), (10, 200, 10), (6, 128, 6), start)
     buttons.append(multi)
-    auto = Button('Autoplay', 550, 500, font, (0, 0, 0), (10, 200, 10), start)
+    auto = Button('Autoplay', 550, 500, font, (0, 0, 0), (10, 200, 10), (6, 128, 6), start)
     buttons.append(auto)
     
     menuloop = True
@@ -329,12 +340,14 @@ def menu():
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     menuloop = False
-            if event.type == pygame.MOUSEBUTTONDOWN:
-                pos = pygame.mouse.get_pos()
-                for button in buttons:
-                    if button.button_x <= pos[0] <= button.button_x + button.button_w and (
-                            button.button_y <= pos[1] <= button.button_y + button.button_h):
-                        gamemode = button.run(button.text)
+            pos = pygame.mouse.get_pos()
+            for button in buttons:
+                dist_x = pos[0] - button.button_x
+                dist_y = pos[1] - button.button_y
+                if 0 <= dist_x <= button.button_w and 0 <= dist_y <= button.button_h:
+                        button.is_active = True
+                        if event.type == pygame.MOUSEBUTTONDOWN: gamemode = button.run(button.text)
+                else: button.is_active = False
                 
         screen.blit(poster, (-80, -80))
         screen.blit(hello_text, (screen.get_size()[0] // 2 - hello_text.get_size()[0] // 2, 80))
