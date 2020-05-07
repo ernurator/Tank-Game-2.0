@@ -41,6 +41,7 @@ font = pygame.font.SysFont('Courier', 24, bold=True)
 big_font = pygame.font.SysFont('Courier', 56, bold=True)
 small_font = pygame.font.SysFont('Courier', 16, bold=True)
 
+
 class Direction(Enum):
     UP = 'UP'
     DOWN = 'DOWN'
@@ -67,12 +68,12 @@ class Bullet:
             self.x = tank.x + 3*tank.width//2
             self.y = tank.y + tank.width//2
             self.height, self.width = self.width, self.height
-        
+
         if tank.direction == Direction.LEFT:
             self.x = tank.x - tank.width//2
             self.y = tank.y + tank.width//2
             self.height, self.width = self.width, self.height
-        
+
         if tank.direction == Direction.UP:
             self.x = tank.x + tank.width//2
             self.y = tank.y - tank.width//2
@@ -80,20 +81,19 @@ class Bullet:
         if tank.direction == Direction.DOWN:
             self.x = tank.x + tank.width//2
             self.y = tank.y + 3*tank.width//2
-        
+
     def draw(self):
         pygame.draw.ellipse(screen, self.color, (self.x, self.y, self.width, self.height))
 
-        
     def move(self, sec):
         self.lifetime += sec
 
         if self.direction == Direction.RIGHT:
             self.x += int(self.speed * sec)
-        
+
         if self.direction == Direction.LEFT:
             self.x -= int(self.speed * sec)
-        
+
         if self.direction == Direction.UP:
             self.y -= int(self.speed * sec)
 
@@ -123,8 +123,9 @@ class Tank:
         self.direction = direction
         self.is_static = True
         self.fire_key = fire
-        
-        self.KEY = {d_right: Direction.RIGHT, d_left: Direction.LEFT, d_up: Direction.UP, d_down: Direction.DOWN}
+
+        self.KEY = {d_right: Direction.RIGHT, d_left: Direction.LEFT,
+                    d_up: Direction.UP, d_down: Direction.DOWN}
 
     def draw(self):
         tank_c = (self.x + self.width // 2, self.y + self.width // 2)
@@ -135,16 +136,15 @@ class Tank:
 
         if self.direction == Direction.RIGHT:
             pygame.draw.line(screen, self.color, tank_c, (self.x + 3*self.width//2, self.y + self.width//2), 4)
-        
+
         if self.direction == Direction.LEFT:
             pygame.draw.line(screen, self.color, tank_c, (self.x - self.width//2, self.y + self.width//2), 4)
-        
+
         if self.direction == Direction.UP:
             pygame.draw.line(screen, self.color, tank_c, (self.x + self.width//2, self.y - self.width//2), 4)
 
         if self.direction == Direction.DOWN:
             pygame.draw.line(screen, self.color, tank_c, (self.x + self.width//2, self.y + 3*self.width//2), 4)
-
 
     def changeDirection(self, direction):
         self.direction = direction
@@ -172,12 +172,12 @@ class Tank:
                 dx = change
                 if self.x + dx > screen.get_size()[0]:
                     dx = -self.x - self.width
-            
+
             if self.direction == Direction.LEFT:
                 dx = -change
                 if self.x + dx < -self.width:
                     dx = -self.x + screen.get_size()[0]
-            
+
             if self.direction == Direction.UP:
                 dy = -change
                 if self.y + dy < -self.width:
@@ -190,9 +190,9 @@ class Tank:
 
             # Other tanks
             future_pos = pygame.Rect(self.x + dx, self.y + dy, self.width, self.width)
-            if not any([future_pos.colliderect(pygame.Rect(tank.x, tank.y, tank.width, tank.width)) 
+            if not any([future_pos.colliderect(pygame.Rect(tank.x, tank.y, tank.width, tank.width))
                         for tank in tanks if self != tank]):
-                    self.x, self.y = self.x + dx, self.y + dy
+                self.x, self.y = self.x + dx, self.y + dy
 
             # Walls
             for i in range(len(walls)):
@@ -215,11 +215,11 @@ class Tank:
 
 
 class Wall:
-    
+
     def __init__(self, coord):
         self.image = wall_image
         self.coord = coord
-    
+
     def draw(self):
         screen.blit(self.image, self.coord)
 
@@ -242,9 +242,9 @@ class Box:
         self.newBox()
 
     def newBox(self):
-        self.reload = 7 + random.random() * 5 # 7 - 12 seconds
+        self.reload = 7 + random.random() * 5  # 7 - 12 seconds
         self.coord = random.choice(self.spaces)
-    
+
     def draw(self):
         screen.blit(self.images[self.cur_image], self.coord)
 
@@ -293,7 +293,7 @@ def checkCollisions(bullet):
             # wall_sound.play(fade_ms=1700)
             del walls[i]
             return True
-            
+
     for i in range(len(tanks)):
         dist_x = bullet.x - tanks[i].x
         dist_y = bullet.y - tanks[i].y
@@ -301,7 +301,8 @@ def checkCollisions(bullet):
             explosion_sound.play()
             bullet.tank.score += 1
             tanks[i].lifes -= 1
-            if tanks[i].lifes <= 0: del tanks[i]
+            if tanks[i].lifes <= 0:
+                del tanks[i]
             return True
     return False
 
@@ -321,7 +322,7 @@ class RpcClient():
         result = self.channel.queue_declare(queue='', exclusive=True, auto_delete=True)
         self.callback_queue = result.method.queue
         self.channel.exchange_declare('X:routing.topic', 'topic', durable=True)
-        
+
         self.channel.queue_bind(exchange='X:routing.topic', queue=self.callback_queue)
         self.channel.basic_consume(
             queue=self.callback_queue,
@@ -335,7 +336,7 @@ class RpcClient():
     def call(self, key, msg=''):
         self.response = None
         self.corr_id = str(uuid.uuid4())
-        
+
         self.channel.basic_publish(
             exchange='X:routing.topic',
             routing_key=key,
@@ -343,7 +344,7 @@ class RpcClient():
                 reply_to=self.callback_queue,
                 correlation_id=self.corr_id),
             body=msg
-            )
+        )
         while self.response is None:
             self.connection.process_data_events()
         return json.loads(self.response)
@@ -353,9 +354,10 @@ class RpcClient():
 
 
 class StateEvents(Thread):
-    def __init__(self, room): 
-        Thread.__init__(self) 
+    def __init__(self, room):
+        Thread.__init__(self)
         self.room = room
+
     def run(self):
         credentials = pika.PlainCredentials('dar-tanks', password='5orPLExUYnyVYZg48caMpX')
         parameters = pika.ConnectionParameters('34.254.177.17', 5672, 'dar-tanks', credentials)
@@ -366,12 +368,13 @@ class StateEvents(Thread):
         result = channel.queue_declare(queue='', exclusive=True, auto_delete=True)
         events_queue = result.method.queue
         channel.exchange_declare('X:routing.topic', 'topic', durable=True)
-        
+
         channel.queue_bind(exchange='X:routing.topic', queue=events_queue, routing_key=f'event.state.{self.room}')
 
         def on_response(ch, method, props, body):
             global buffer, room_is_ready, stop_thread
-            if stop_thread: raise Exception('Consumer thread is killed')
+            if stop_thread:
+                raise Exception('Consumer thread is killed')
             buffer.append(json.loads(body))
             room_is_ready = True
 
@@ -424,7 +427,7 @@ def menu():
     buttons.append(multi)
     auto = Button('Autoplay', 550, 500, font, (0, 0, 0), (10, 200, 10), (6, 128, 6), start)
     buttons.append(auto)
-    
+
     menuloop = True
     while menuloop:
         clock.tick(FPS)
@@ -439,12 +442,13 @@ def menu():
                 dist_x = pos[0] - button.button_x
                 dist_y = pos[1] - button.button_y
                 if 0 <= dist_x <= button.button_w and 0 <= dist_y <= button.button_h:
-                        button.is_active = True
-                        if event.type == pygame.MOUSEBUTTONDOWN: 
-                            gamemode = button.run(button.text)
-                            menuloop = False
-                else: button.is_active = False
-                
+                    button.is_active = True
+                    if event.type == pygame.MOUSEBUTTONDOWN:
+                        gamemode = button.run(button.text)
+                        menuloop = False
+                else:
+                    button.is_active = False
+
         screen.blit(poster, (-80, -80))
         screen.blit(hello_text, (screen.get_size()[0] // 2 - hello_text.get_size()[0] // 2, 80))
         for button in buttons:
@@ -477,7 +481,7 @@ def again():
     screen.blit(text, (x, y))
     screen.blit(text1, (x1, y1))
     pygame.display.flip()
-    
+
     rep_loop = True
     while rep_loop:
         clock.tick(FPS)
@@ -513,8 +517,6 @@ def single():
                     free_spaces.append([j*32, i*32])
                 j += 1
             i += 1
-
-
     tank1 = Tank(spawnpoints[0][0], spawnpoints[0][1], 800//6, (3, 102, 6), 32, 'name1', fire=pygame.K_RETURN)
     tank2 = Tank(spawnpoints[1][0], spawnpoints[1][1], 800//6, (135, 101, 26), 32, 'name2', d_right=pygame.K_d, d_left=pygame.K_a, d_up=pygame.K_w, d_down=pygame.K_s)
     # tank3 = Tank(100, 100, 800//6, (0, 0, 0xff), pygame.K_h, pygame.K_f, pygame.K_t, pygame.K_g, pygame.K_2)
@@ -549,8 +551,8 @@ def single():
                     stay = False
             if stay:
                 tank.is_static = True
-                
-        screen.fill((201, 175, 135)) # 225, 235, 250
+
+        screen.fill((201, 175, 135))  # 225, 235, 250
         # screen.blit(background, (0, 0))
         for wall in walls:
             wall.draw()
@@ -636,7 +638,6 @@ def multi():
                         if event.key == key:
                             request = json.dumps({'token': token, 'direction': tanks[name].KEY[key].value})
                             rpc_response = rpc.call('tank.request.turn', request)
-                
 
         if not room_is_ready:
             wait_text = 'Loading...'
@@ -652,11 +653,11 @@ def multi():
             for tank in cur_state['gameField']['tanks']:
                 colour = (255, 0, 0) if tank['id'] == name else (0, random.randint(100, 255), 0)
                 if not tank['id'] in tanks.keys():
-                    tanks[tank['id']] = Tank(tank['x'], tank['y'], 0, colour, tank['width'], tank['id'], 
-                                            Direction[tank['direction']], tank['health'], tank['score'])
+                    tanks[tank['id']] = Tank(tank['x'], tank['y'], 0, colour, tank['width'], tank['id'],
+                                             Direction[tank['direction']], tank['health'], tank['score'])
                 else:
                     tanks[tank['id']].set_values(tank['x'], tank['y'], Direction[tank['direction']], tank['health'], tank['score'])
-            
+
             for bullet in cur_state['gameField']['bullets']:
                 pygame.draw.ellipse(screen, (0, 0, 0), (bullet['x'], bullet['y'], bullet['width'], bullet['height']))
 
@@ -676,9 +677,8 @@ def multi():
         for tank in tanks.values():
             tank.draw()
         # draw info panel, compare number of bullets, if hit play sound, make normal wining (not one), losing, maybe nicks under tanks
-        
-        pygame.display.flip()
 
+        pygame.display.flip()
 
     stop_thread = True
     room_state.join()
