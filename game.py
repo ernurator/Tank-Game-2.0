@@ -1,6 +1,11 @@
 import pygame
 from enum import Enum
 import random
+import pika
+import uuid
+import json
+from threading import Thread
+from collections import deque
 #pylint: disable=no-member
 
 pygame.init()
@@ -37,10 +42,10 @@ big_font = pygame.font.SysFont('Courier', 56, bold=True)
 small_font = pygame.font.SysFont('Courier', 16, bold=True)
 
 class Direction(Enum):
-    UP = 1
-    DOWN = 2
-    LEFT = 3
-    RIGHT = 4
+    UP = 'UP'
+    DOWN = 'DOWN'
+    LEFT = 'LEFT'
+    RIGHT = 'RIGHT'
 
 
 ##########################################    Bullet    ##########################################
@@ -51,7 +56,7 @@ class Bullet:
     def __init__(self, tank):
         shoot_sound.play(maxtime=1600)
         self.tank = tank
-        # self.color = tank.color
+        self.color = (0, 0, 0)
         self.width = 4
         self.height = 8
         self.direction = tank.direction
@@ -77,8 +82,7 @@ class Bullet:
             self.y = tank.y + 3*tank.width//2
         
     def draw(self):
-        # pygame.draw.ellipse(screen, self.color, (self.x, self.y, self.width, self.height))
-        pygame.draw.ellipse(screen, (0, 0, 0), (self.x, self.y, self.width, self.height))
+        pygame.draw.ellipse(screen, self.color, (self.x, self.y, self.width, self.height))
 
         
     def move(self, sec):
@@ -106,17 +110,17 @@ max_lifes = 10
 
 class Tank:
 
-    def __init__(self, x, y, speed, color, d_right=pygame.K_RIGHT, d_left=pygame.K_LEFT, d_up=pygame.K_UP, d_down=pygame.K_DOWN, fire=pygame.K_SPACE):
+    def __init__(self, x, y, speed, color, width, name, direction=Direction.RIGHT, health=max_lifes, score=0, d_right=pygame.K_RIGHT, d_left=pygame.K_LEFT, d_up=pygame.K_UP, d_down=pygame.K_DOWN, fire=pygame.K_SPACE):
         self.x = x
         self.y = y
         self.speed = speed
         self.countdown = 0
         self.power_up = False
         self.color = color
-        self.width = 32
-        self.lifes = max_lifes
-        self.score = 0
-        self.direction = Direction.RIGHT
+        self.width = width
+        self.lifes = health
+        self.score = score
+        self.direction = direction
         self.is_static = True
         self.fire_key = fire
         
@@ -143,6 +147,13 @@ class Tank:
 
 
     def changeDirection(self, direction):
+        self.direction = direction
+
+    def set_values(self, x, y, direction, health, score):
+        self.x = x
+        self.y = y
+        self.lifes = health
+        self.score = score
         self.direction = direction
 
     def move(self, sec, box):
@@ -217,8 +228,9 @@ class Wall:
 
 
 class Box:
-    def __init__(self, interval):
+    def __init__(self, interval, free_spaces):
         self.interval = interval
+        self.spaces = free_spaces
         self.images = []
         self.size = [32, 32]
         for i in range(box_image.get_size()[1] // self.size[1]):
@@ -230,9 +242,8 @@ class Box:
         self.newBox()
 
     def newBox(self):
-        global free_spaces
         self.reload = 7 + random.random() * 5 # 7 - 12 seconds
-        self.coord = random.choice(free_spaces)
+        self.coord = random.choice(self.spaces)
     
     def draw(self):
         screen.blit(self.images[self.cur_image], self.coord)
@@ -295,19 +306,98 @@ def checkCollisions(bullet):
     return False
 
 
+##########################################    RPC    ##########################################
+
+
+class RpcClient():
+
+    def __init__(self):
+        self.credentials = pika.PlainCredentials('dar-tanks', password='5orPLExUYnyVYZg48caMpX')
+        self.parameters = pika.ConnectionParameters('34.254.177.17', 5672, 'dar-tanks', self.credentials)
+        self.connection = pika.BlockingConnection(self.parameters)
+
+        self.channel = self.connection.channel()
+
+        result = self.channel.queue_declare(queue='', exclusive=True, auto_delete=True)
+        self.callback_queue = result.method.queue
+        self.channel.exchange_declare('X:routing.topic', 'topic', durable=True)
+        
+        self.channel.queue_bind(exchange='X:routing.topic', queue=self.callback_queue)
+        self.channel.basic_consume(
+            queue=self.callback_queue,
+            on_message_callback=self.on_response,
+            auto_ack=True)
+
+    def on_response(self, ch, method, props, body):
+        if self.corr_id == props.correlation_id:
+            self.response = body
+
+    def call(self, key, msg=''):
+        self.response = None
+        self.corr_id = str(uuid.uuid4())
+        
+        self.channel.basic_publish(
+            exchange='X:routing.topic',
+            routing_key=key,
+            properties=pika.BasicProperties(
+                reply_to=self.callback_queue,
+                correlation_id=self.corr_id),
+            body=msg
+            )
+        while self.response is None:
+            self.connection.process_data_events()
+        return json.loads(self.response)
+
+
+##########################################    Room Events    ##########################################
+
+
+class StateEvents(Thread):
+    def __init__(self, room): 
+        Thread.__init__(self) 
+        self.room = room
+    def run(self):
+        credentials = pika.PlainCredentials('dar-tanks', password='5orPLExUYnyVYZg48caMpX')
+        parameters = pika.ConnectionParameters('34.254.177.17', 5672, 'dar-tanks', credentials)
+        connection = pika.BlockingConnection(parameters)
+
+        channel = connection.channel()
+
+        result = channel.queue_declare(queue='', exclusive=True, auto_delete=True)
+        events_queue = result.method.queue
+        channel.exchange_declare('X:routing.topic', 'topic', durable=True)
+        
+        channel.queue_bind(exchange='X:routing.topic', queue=events_queue, routing_key=f'event.state.{self.room}')
+
+        def on_response(ch, method, props, body):
+            global buffer, room_is_ready, stop_thread
+            if stop_thread: raise Exception('Consumer thread is killed')
+            buffer.append(json.loads(body))
+            room_is_ready = True
+
+        channel.basic_consume(
+            queue=events_queue,
+            on_message_callback=on_response,
+            auto_ack=True)
+        try:
+            channel.start_consuming()
+        except Exception as e:
+            print(e)
+
+
 ##########################################    Init    ##########################################
 
 
-menuloop = True
-mainloop = True
 gamemode = ''
 repeat = True
 game_over = False
 tanks = []
 bullets = []
 walls = []
-free_spaces = []
 winner = ''
+buffer = deque()
+stop_thread = False
+room_is_ready = False
 
 clock = pygame.time.Clock()
 FPS = 60
@@ -318,15 +408,13 @@ FPS = 60
 
 def start(txt):
     button_sound.play()
-    global menuloop
-    menuloop = False
     if txt == 'Single player': return 's'
     if txt == 'Multiplayer': return 'm'
     if txt == 'Autoplay': return 'a'
 
 
 def menu():
-    global clock, menuloop, gamemode
+    global clock, gamemode
     hello_text = 'Tanks 2D'
     hello_text = big_font.render(hello_text, True, (50, 50, 50))
     buttons = []
@@ -352,7 +440,9 @@ def menu():
                 dist_y = pos[1] - button.button_y
                 if 0 <= dist_x <= button.button_w and 0 <= dist_y <= button.button_h:
                         button.is_active = True
-                        if event.type == pygame.MOUSEBUTTONDOWN: gamemode = button.run(button.text)
+                        if event.type == pygame.MOUSEBUTTONDOWN: 
+                            gamemode = button.run(button.text)
+                            menuloop = False
                 else: button.is_active = False
                 
         screen.blit(poster, (-80, -80))
@@ -366,8 +456,8 @@ def menu():
 ##########################################    Restart loop    ##########################################
 
 
-def again(winner=''):
-    global repeat
+def again():
+    global repeat, winner
     screen.fill((255, 255, 255))
     if winner != '':
         text = font.render('Congrats! Winner: ', True, (10, 10, 10))
@@ -408,6 +498,7 @@ def again(winner=''):
 def single():
     global mainloop, clock, bullets, tanks, walls, winner, game_over
     spawnpoints = []
+    free_spaces = []
     with open('res/maps/map1.txt') as map:
         lines = map.readlines()
         i = 0
@@ -424,13 +515,13 @@ def single():
             i += 1
 
 
-    tank1 = Tank(spawnpoints[0][0], spawnpoints[0][1], 800//6, (3, 102, 6), fire=pygame.K_RETURN)
-    tank2 = Tank(spawnpoints[1][0], spawnpoints[1][1], 800//6, (135, 101, 26), pygame.K_d, pygame.K_a, pygame.K_w, pygame.K_s)
+    tank1 = Tank(spawnpoints[0][0], spawnpoints[0][1], 800//6, (3, 102, 6), 32, 'name1', fire=pygame.K_RETURN)
+    tank2 = Tank(spawnpoints[1][0], spawnpoints[1][1], 800//6, (135, 101, 26), 32, 'name2', d_right=pygame.K_d, d_left=pygame.K_a, d_up=pygame.K_w, d_down=pygame.K_s)
     # tank3 = Tank(100, 100, 800//6, (0, 0, 0xff), pygame.K_h, pygame.K_f, pygame.K_t, pygame.K_g, pygame.K_2)
     # tank4 = Tank(100, 200, 800//6, (0xff, 255, 0), pygame.K_l, pygame.K_j, pygame.K_i, pygame.K_k, pygame.K_3)
 
     tanks += [tank1, tank2]
-    box = Box(0.05)
+    box = Box(0.05, free_spaces)
     cycle = 0
 
     mainloop = True
@@ -505,6 +596,95 @@ def single():
             mainloop = False
 
 
+##########################################    Multiplayer    ##########################################
+
+
+def multi():
+    global clock, bullets, winner, game_over, screen, buffer, stop_thread
+    screen = pygame.display.set_mode((1200, 800))
+
+    rpc = RpcClient()
+    rpc_response = {}
+    for i in range(1, 11):
+        request = json.dumps({'roomId': f'room-{i}'})
+        rpc_response = rpc.call('tank.request.register', request)
+        if rpc_response.get('status', 200) == 200: break
+        else: print(rpc_response)
+
+    room, name, token = rpc_response['roomId'], rpc_response['tankId'], rpc_response['token']
+    room_state = StateEvents(room)
+    room_state.start()
+
+    tanks = {}
+    tanks[name] = Tank(0, 0, 0, (255, 0, 0), 31, name)
+
+    mainloop = True
+    while mainloop:
+        clock.tick(FPS)
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                mainloop = False
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    mainloop = False
+                    game_over = True
+                if tanks.get(name, '') != '':
+                    if event.key == tanks[name].fire_key:
+                        request = json.dumps({'token': token})
+                        rpc_response = rpc.call('tank.request.fire', request)
+                    for key in tanks[name].KEY.keys():
+                        if event.key == key:
+                            request = json.dumps({'token': token, 'direction': tanks[name].KEY[key].value})
+                            rpc_response = rpc.call('tank.request.turn', request)
+                
+
+        if not room_is_ready:
+            wait_text = 'Loading...'
+            wait_text = big_font.render(wait_text, True, (50, 50, 50))
+            screen.fill((255, 255, 255))
+            screen.blit(wait_text, (screen.get_size()[0] // 2 - wait_text.get_size()[0] // 2, screen.get_size()[1] // 2 - wait_text.get_size()[1] // 2))
+            pygame.display.flip()
+            continue
+
+        if len(buffer) != 0:
+            screen.fill((201, 175, 135))
+            cur_state = buffer.popleft()
+            for tank in cur_state['gameField']['tanks']:
+                colour = (255, 0, 0) if tank['id'] == name else (0, random.randint(100, 255), 0)
+                if not tank['id'] in tanks.keys():
+                    tanks[tank['id']] = Tank(tank['x'], tank['y'], 0, colour, tank['width'], tank['id'], 
+                                            Direction[tank['direction']], tank['health'], tank['score'])
+                else:
+                    tanks[tank['id']].set_values(tank['x'], tank['y'], Direction[tank['direction']], tank['health'], tank['score'])
+            
+            for bullet in cur_state['gameField']['bullets']:
+                pygame.draw.ellipse(screen, (0, 0, 0), (bullet['x'], bullet['y'], bullet['width'], bullet['height']))
+
+            for removed in cur_state['kicked'] + cur_state['losers']:
+                try:
+                    del tanks[removed['tankId']]
+                except Exception as e:
+                    print(e)
+
+            if cur_state['winners']:
+                print(cur_state['winners'], tanks)
+                mainloop = False
+                game_over = True
+                for winner_t in cur_state['winners']:
+                    winner = tanks[winner_t['tankId']]
+
+        for tank in tanks.values():
+            tank.draw()
+        # draw info panel, compare number of bullets, if hit play sound, make normal wining (not one), losing, maybe nicks under tanks
+        
+        pygame.display.flip()
+
+
+    stop_thread = True
+    room_state.join()
+    screen = pygame.display.set_mode((800, 640))
+
+
 ##########################################    Game launch    ##########################################
 
 
@@ -515,11 +695,13 @@ while repeat:
     tanks = []
     bullets = []
     walls = []
-    free_spaces = []
     winner = ''
+    buffer = deque()
+    room_is_ready = False
+    stop_thread = False
     menu()
     if gamemode == 's': single()
-    # ...
-    if game_over: again(winner)
+    elif gamemode == 'm': multi()
+    if game_over: again()
 
 pygame.quit()
