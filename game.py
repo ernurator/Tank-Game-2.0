@@ -118,6 +118,8 @@ class Tank:
         self.power_up = False
         self.color = color
         self.width = width
+        self.name = name
+        self.txt = small_font.render(str(name), True, (0, 0, 0))
         self.lifes = health
         self.score = score
         self.direction = direction
@@ -135,16 +137,18 @@ class Tank:
         pygame.draw.circle(screen, (0, 0, 0), tank_c, self.width // 2 - 1, 1)
 
         if self.direction == Direction.RIGHT:
-            pygame.draw.line(screen, self.color, tank_c, (self.x + 3*self.width//2, self.y + self.width//2), 4)
+            pygame.draw.line(screen, self.color, tank_c, (tank_c[0] + self.width, tank_c[1]), 4)
 
         if self.direction == Direction.LEFT:
-            pygame.draw.line(screen, self.color, tank_c, (self.x - self.width//2, self.y + self.width//2), 4)
+            pygame.draw.line(screen, self.color, tank_c, (tank_c[0] - self.width, tank_c[1]), 4)
 
         if self.direction == Direction.UP:
-            pygame.draw.line(screen, self.color, tank_c, (self.x + self.width//2, self.y - self.width//2), 4)
+            pygame.draw.line(screen, self.color, tank_c, (tank_c[0], tank_c[1] - self.width), 4)
 
         if self.direction == Direction.DOWN:
-            pygame.draw.line(screen, self.color, tank_c, (self.x + self.width//2, self.y + 3*self.width//2), 4)
+            pygame.draw.line(screen, self.color, tank_c, (tank_c[0], tank_c[1] + self.width), 4)
+
+        screen.blit(self.txt, (tank_c[0] - self.txt.get_size()[0] // 2, self.y + self.width + 2))
 
     def changeDirection(self, direction):
         self.direction = direction
@@ -398,6 +402,8 @@ tanks = []
 bullets = []
 walls = []
 winner = ''
+losers = []
+kicked = []
 buffer = deque()
 stop_thread = False
 room_is_ready = False
@@ -477,7 +483,7 @@ def again():
 
     text1 = font.render('Press R to play again', True, (200, 200, 200))
     x1 = screen.get_size()[0] // 2 - text1.get_size()[0] // 2
-    y1 = y + text.get_size()[1] + 10
+    y1 = y + text.get_size()[1] + 25
     screen.blit(text, (x, y))
     screen.blit(text1, (x1, y1))
     pygame.display.flip()
@@ -517,7 +523,7 @@ def single():
                     free_spaces.append([j*32, i*32])
                 j += 1
             i += 1
-    tank1 = Tank(spawnpoints[0][0], spawnpoints[0][1], 800//6, (3, 102, 6), 32, 'name1', fire=pygame.K_RETURN)
+    tank1 = Tank(spawnpoints[0][0], spawnpoints[0][1], 800//6, (3, 102, 6), 32, 'Ера', fire=pygame.K_RETURN)
     tank2 = Tank(spawnpoints[1][0], spawnpoints[1][1], 800//6, (135, 101, 26), 32, 'name2', d_right=pygame.K_d, d_left=pygame.K_a, d_up=pygame.K_w, d_down=pygame.K_s)
     # tank3 = Tank(100, 100, 800//6, (0, 0, 0xff), pygame.K_h, pygame.K_f, pygame.K_t, pygame.K_g, pygame.K_2)
     # tank4 = Tank(100, 200, 800//6, (0xff, 255, 0), pygame.K_l, pygame.K_j, pygame.K_i, pygame.K_k, pygame.K_3)
@@ -572,6 +578,8 @@ def single():
 
         for i in range(len(tanks)):
             tanks[i].move(seconds, box)
+            txt = small_font.render(f'{tanks[i].name}: {tanks[i].lifes} lifes, {tanks[i].score} points', True, (0, 0, 0))
+            screen.blit(txt, (5, i*txt.get_size()[1] + 5))
             if tanks[i].lifes <= 0:
                 del tanks[i]
                 break
@@ -581,10 +589,6 @@ def single():
             if checkCollisions(bullets[i]) or bullets[i].lifetime > bullets[i].destroytime:
                 del bullets[i]
                 break
-
-        for i in range(len(tanks)):
-            txt = small_font.render(f'Tank {i + 1}: {tanks[i].lifes} lifes, {tanks[i].score} points', True, (0, 0, 0))
-            screen.blit(txt, (5, i*txt.get_size()[1] + 5))
 
         pygame.display.flip()
 
@@ -602,7 +606,7 @@ def single():
 
 
 def multi():
-    global clock, bullets, winner, game_over, screen, buffer, stop_thread
+    global clock, bullets, winner, game_over, screen, buffer, stop_thread, losers, kicked
     screen = pygame.display.set_mode((1200, 800))
 
     rpc = RpcClient()
@@ -618,8 +622,9 @@ def multi():
     room_state.start()
 
     tanks = {}
-    tanks[name] = Tank(0, 0, 0, (255, 0, 0), 31, name)
+    tanks[name] = Tank(0, 0, 0, (255, 0, 0), 31, 'You')
 
+    bullets = 0
     mainloop = True
     while mainloop:
         clock.tick(FPS)
@@ -653,15 +658,33 @@ def multi():
             for tank in cur_state['gameField']['tanks']:
                 colour = (255, 0, 0) if tank['id'] == name else (0, random.randint(100, 255), 0)
                 if not tank['id'] in tanks.keys():
-                    tanks[tank['id']] = Tank(tank['x'], tank['y'], 0, colour, tank['width'], tank['id'],
+                    tanks[tank['id']] = Tank(tank['x'], tank['y'], 50, colour, tank['width'], tank['id'] if tank['id'] != name else 'You',
                                              Direction[tank['direction']], tank['health'], tank['score'])
                 else:
                     tanks[tank['id']].set_values(tank['x'], tank['y'], Direction[tank['direction']], tank['health'], tank['score'])
 
             for bullet in cur_state['gameField']['bullets']:
-                pygame.draw.ellipse(screen, (0, 0, 0), (bullet['x'], bullet['y'], bullet['width'], bullet['height']))
+                pygame.draw.rect(screen, (255, 0, 0) if bullet['owner'] == name else (0, 0, 0), (bullet['x'], bullet['y'], bullet['width'], bullet['height']))
+            if len(cur_state['gameField']['bullets']) > bullets: shoot_sound.play(maxtime=1600)
+            bullets = len(cur_state['gameField']['bullets'])
 
-            for removed in cur_state['kicked'] + cur_state['losers']:
+            if cur_state['hits']: explosion_sound.play()
+
+            for removed in cur_state['losers']:
+                losers.append(tanks[removed['tankId']])
+                if removed['tankId'] == name:
+                    mainloop = False
+                    game_over = True
+                try:
+                    del tanks[removed['tankId']]
+                except Exception as e:
+                    print(e)
+
+            for removed in cur_state['kicked']:
+                kicked.append(tanks[removed['tankId']])
+                if removed['tankId'] == name:
+                    mainloop = False
+                    game_over = True
                 try:
                     del tanks[removed['tankId']]
                 except Exception as e:
@@ -674,9 +697,10 @@ def multi():
                 for winner_t in cur_state['winners']:
                     winner = tanks[winner_t['tankId']]
 
-        for tank in tanks.values():
-            tank.draw()
-        # draw info panel, compare number of bullets, if hit play sound, make normal wining (not one), losing, maybe nicks under tanks
+            for tank in tanks.values():
+                tank.draw()
+
+        # draw info panel, make normal wining (not one), losing
 
         pygame.display.flip()
 
@@ -696,6 +720,8 @@ while repeat:
     bullets = []
     walls = []
     winner = ''
+    losers = []
+    kicked = []
     buffer = deque()
     room_is_ready = False
     stop_thread = False
