@@ -663,6 +663,9 @@ def multi():
                 else:
                     tanks[tank['id']].set_values(tank['x'], tank['y'], Direction[tank['direction']], tank['health'], tank['score'])
 
+            for tank in tanks.values():
+                tank.draw()
+
             for bullet in cur_state['gameField']['bullets']:
                 pygame.draw.rect(screen, (255, 0, 0) if bullet['owner'] == name else (0, 0, 0), (bullet['x'], bullet['y'], bullet['width'], bullet['height']))
             if len(cur_state['gameField']['bullets']) > bullets: shoot_sound.play(maxtime=1600)
@@ -697,9 +700,8 @@ def multi():
                 for winner_t in cur_state['winners']:
                     winner = tanks[winner_t['tankId']]
 
-            for tank in tanks.values():
-                tank.draw()
-
+        # for tank in tanks.values():
+        #     tank.draw()
         # draw info panel, make normal wining (not one), losing
 
         pygame.display.flip()
