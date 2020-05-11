@@ -2,7 +2,7 @@ import pygame
 from enum import Enum
 import random
 from helper import screen, wall_image, box_image, small_font, shoot_sound
-#pylint: disable=no-member
+#pylint: disable=no-member, too-many-function-args
 
 class Direction(Enum):
     UP = 'UP'
@@ -82,6 +82,8 @@ class Tank:
         self.power_up = False
         self.color = color
         self.width = width
+        # self.cur_image = 0
+        # self.images = [tank_image1, tank_image2]
         self.size = [self.width, self.width]
         self.name = name
         self.txt = small_font.render(str(name), True, (0, 0, 0))
@@ -97,6 +99,13 @@ class Tank:
     def draw(self):
         tank_c = (self.x + self.width // 2, self.y + self.width // 2)
         # dynamic = tuple(int(i * self.lifes / max_lifes) for i in self.color)
+
+        # body = pygame.Surface((self.width, self.width))
+        # pygame.draw.rect(body, self.color, (0, 0, self.width, self.width))
+        # body.set_colorkey((255, 255, 255))
+        # body.blit(self.images[self.cur_image], (0, 0))
+        # screen.blit(body, (self.x, self.y))
+
         pygame.draw.rect(screen, self.color, (self.x, self.y, self.width, self.width))
         pygame.draw.circle(screen, self.color, tank_c, self.width // 2)
         pygame.draw.circle(screen, (0, 0, 0), tank_c, self.width // 2 - 1, 1)
@@ -232,6 +241,10 @@ class Button:
     def draw(self):
         # self.txt = self.font.render(str(self.text), True, self.txt_col)
         colour = self.colour if not self.is_active else self.act_colour
-        pygame.draw.rect(screen, colour, (self.button_x, self.button_y, self.button_w, self.button_h))
+        but = pygame.Surface((self.button_w, self.button_h))
+        but.fill(colour)
+        but.set_alpha(180)
+        screen.blit(but, (self.button_x, self.button_y))
+        # pygame.draw.rect(screen, colour, (self.button_x, self.button_y, self.button_w, self.button_h))
         pygame.draw.rect(screen, self.color_per, (self.button_x, self.button_y, self.button_w, self.button_h), 2)
         screen.blit(self.txt, (self.txt_x, self.txt_y))
