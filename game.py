@@ -124,10 +124,10 @@ def again(winner, lost, kicked):
 while repeat:
     repeat = False
     gamemode = ''
-    g_o = False
+    game_over = False
     menu()
-    if gamemode == 's': g_o, winner, lost, kicked = single()
-    elif gamemode == 'm': g_o, winner, lost, kicked = multi()
-    if g_o: again(winner, lost, kicked)
+    if gamemode == 's': game_over, winner, lost, kicked = single()
+    elif gamemode == 'm': game_over, winner, lost, kicked = multi()
+    if game_over: again(winner, lost, kicked)
 
 pygame.quit()

@@ -9,7 +9,6 @@ from rpc_client import RpcClient
 #pylint: disable=no-member, too-many-function-args
 
 
-sc = pygame.Surface((1200, 800))
 buffer = deque()
 stop_thread = False
 room_is_ready = False
@@ -56,55 +55,55 @@ class StateEvents(Thread):
 
 
 def drawScoreboard(name, tanks):
-    global sc
-    pygame.draw.rect(sc, (225, 235, 250), (1000, 0, 200, 800))
-    pygame.draw.line(sc, (0, 0, 0), (1000, 0), (1000, 800), 2)
+    global screen
+    pygame.draw.rect(screen, (225, 235, 250), (800, 0, 200, 600))
+    pygame.draw.line(screen, (0, 0, 0), (800, 0), (800, 600), 2)
     info_text = font.render('Leaderboard', True, (0, 0, 0))
-    sc.blit(info_text, (1100 - info_text.get_size()[0] // 2, 10)) ####
+    screen.blit(info_text, (900 - info_text.get_size()[0] // 2, 10)) ####
 
     tanks.sort(key=lambda x: x['score'], reverse=True)
     prev_y = 10 + info_text.get_size()[1]
     for tank in tanks:
         t_name = 'You' if tank['id'] == name else tank['id']
         score_text = small_font.render(f"{t_name}: {tank['score']}, {tank['health']} lifes", True, (0, 0, 0))
-        sc.blit(score_text, (1100 - score_text.get_size()[0] // 2, prev_y + 10)) ####
+        screen.blit(score_text, (900 - score_text.get_size()[0] // 2, prev_y + 10)) ####
         prev_y += score_text.get_size()[1]
 
 
 def draw_tank(name, x, y, id, width, height, direction, **kwargs):
         tank_c = (x + width // 2, y + height // 2)
         color = (255, 0, 0) if id == name else (0, 255, 0)
-        pygame.draw.rect(sc, color, (x, y, width, width))
-        pygame.draw.circle(sc, color, tank_c, width // 2)
-        pygame.draw.circle(sc, (0, 0, 0), tank_c, width // 2 - 1, 1)
+        pygame.draw.rect(screen, color, (x, y, width, width))
+        pygame.draw.circle(screen, color, tank_c, width // 2)
+        pygame.draw.circle(screen, (0, 0, 0), tank_c, width // 2 - 1, 1)
 
         if direction == 'RIGHT':
-            pygame.draw.line(sc, color, tank_c, (tank_c[0] + width, tank_c[1]), 4)
+            pygame.draw.line(screen, color, tank_c, (tank_c[0] + width, tank_c[1]), 4)
 
         if direction == 'LEFT':
-            pygame.draw.line(sc, color, tank_c, (tank_c[0] - width, tank_c[1]), 4)
+            pygame.draw.line(screen, color, tank_c, (tank_c[0] - width, tank_c[1]), 4)
 
         if direction == 'UP':
-            pygame.draw.line(sc, color, tank_c, (tank_c[0], tank_c[1] - width), 4)
+            pygame.draw.line(screen, color, tank_c, (tank_c[0], tank_c[1] - width), 4)
 
         if direction == 'DOWN':
-            pygame.draw.line(sc, color, tank_c, (tank_c[0], tank_c[1] + width), 4)
+            pygame.draw.line(screen, color, tank_c, (tank_c[0], tank_c[1] + width), 4)
 
         txt = small_font.render('You' if id == name else id, True, (0, 0, 0))
-        sc.blit(txt, (tank_c[0] - txt.get_size()[0] // 2, y + width + 2))
+        screen.blit(txt, (tank_c[0] - txt.get_size()[0] // 2, y + width + 2))
 
 
 def draw_bullet(name, x, y, owner, width, height, **kwargs):
         color = (255, 0, 0) if owner == name else (0, 0, 0)
-        pygame.draw.rect(sc, color, (x, y, width, height))
+        pygame.draw.rect(screen, color, (x, y, width, height))
 
 
 ##########################################    Multiplayer    ##########################################
 
 
 def multi():
-    global clock, screen, buffer, stop_thread, room_is_ready, sc
-    screen = pygame.display.set_mode((1050, 700))
+    global clock, screen, buffer, stop_thread, room_is_ready
+    screen = pygame.display.set_mode((1000, 600))
 
     rpc = RpcClient()
     rpc_response = {}
@@ -151,18 +150,18 @@ def multi():
         if not room_is_ready:
             wait_text = 'Loading...'
             wait_text = big_font.render(wait_text, True, (50, 50, 50))
-            sc.fill((255, 255, 255))
-            text_rect = wait_text.get_rect(center=(sc.get_size()[0] // 2, sc.get_size()[1] // 2))
-            sc.blit(wait_text, text_rect)
+            screen.fill((255, 255, 255))
+            text_rect = wait_text.get_rect(center=(screen.get_size()[0] // 2, screen.get_size()[1] // 2))
+            screen.blit(wait_text, text_rect)
 
         elif len(buffer) != 0:
-            sc.fill((201, 175, 135))
+            screen.fill((201, 175, 135))
             cur_state = buffer.popleft()
 
             remaining_time = cur_state.get('remainingTime', 0)
             text = font.render(f'Remaining time: {remaining_time}', True, (0, 0, 0))
-            text_rect = text.get_rect(center=(500, 50))
-            sc.blit(text, text_rect)
+            text_rect = text.get_rect(center=(400, 50))
+            screen.blit(text, text_rect)
 
             drawScoreboard(name, cur_state['gameField']['tanks'])
             for tank in cur_state['gameField']['tanks']:
@@ -194,8 +193,6 @@ def multi():
 
         # add time, make normal wining (not one)
 
-        scaled_screen = pygame.transform.scale(sc, (1050, 700))
-        screen.blit(scaled_screen, (0, 0))
         pygame.display.flip()
 
     stop_thread = True
