@@ -83,24 +83,27 @@ def multi():
 
             if cur_state['hits']: explosion_sound.play()
 
-            for removed in cur_state['losers']:
-                if removed['tankId'] == name:
-                    lost = True
-                    mainloop = False
-                    game_over = True
+            if next((x for x in cur_state['losers'] if x['tankId'] == name), None):
+                lost = True
+                mainloop = False
+                game_over = True
 
-            for removed in cur_state['kicked']:
-                if removed['tankId'] == name:
-                    kicked = True
-                    mainloop = False
-                    game_over = True
+            elif next((x for x in cur_state['kicked'] if x['tankId'] == name), None):
+                kicked = True
+                mainloop = False
+                game_over = True
 
-            if cur_state['winners']:
+            elif cur_state['winners']:
                 mainloop = False
                 game_over = True
                 win_text = 'Congrats! Score: {}. Winner(-s): '.format(cur_state["winners"][0]["score"])
                 winner = win_text + ', '.join(map(lambda i: i['tankId'] if i['tankId'] != name else 'You', cur_state['winners']))
-    
+
+            elif not next((x for x in tanks if x['id'] == name), None):
+                lost = True
+                mainloop = False
+                game_over = True
+
         pygame.display.flip()
 
     room_state.kill = True
