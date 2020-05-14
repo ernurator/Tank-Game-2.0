@@ -25,7 +25,7 @@ class AI:
                     if me['direction'] == 'UP' or me['direction'] == 'DOWN':
                         self.turn_direction = 'RIGHT'
             if bullet['direction'] == 'DOWN':
-                if -bullet['height'] - RADIUS < dist_y < 0 and -bullet['width'] < dist_x < me['width']:
+                if -me['height'] - RADIUS < dist_y < 0 and -bullet['width'] < dist_x < me['width']:
                     if me['direction'] == 'UP' or me['direction'] == 'DOWN':
                         self.turn_direction = 'RIGHT'
             if bullet['direction'] == 'LEFT':
