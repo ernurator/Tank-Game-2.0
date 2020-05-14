@@ -126,7 +126,8 @@ def single():
             game_over = True
             mainloop = False
         if len(tanks) == 1:
-            winner = tanks[0]
+            win_tank = tanks[0]
+            winner = f'Congrats! Score: {win_tank.score}. Winner(-s): {win_tank.name}'
             game_over = True
             mainloop = False
 

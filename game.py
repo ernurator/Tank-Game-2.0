@@ -69,40 +69,21 @@ def menu():
 
 def again(winner, lost, kicked):
     global repeat
-    screen.fill((255, 255, 255))
     if kicked:
         text = font.render("You were kicked!", True, (10, 10, 10))
-        x = screen.get_size()[0] // 2 - text.get_size()[0] // 2
-        y = screen.get_size()[1] // 2 - text.get_size()[1] // 2
     elif lost:
         text = font.render("You lost!", True, (10, 10, 10))
-        x = screen.get_size()[0] // 2 - text.get_size()[0] // 2
-        y = screen.get_size()[1] // 2 - text.get_size()[1] // 2
-    elif isinstance(winner, list):
-        txt = f'Congrats! Score: {winner[0]["score"]}. Winner(-s): '
-        for tank in winner:
-            txt += tank['tankId'] + ', '
-        text = font.render(txt, True, (10, 10, 10))
-        x = screen.get_size()[0] // 2 - text.get_size()[0] // 2
-        y = screen.get_size()[1] // 2 - text.get_size()[1] // 2
     elif winner != '':
-        text = font.render(f'Congrats! Score: {winner.score}. Winner: ', True, (10, 10, 10))
-        x = screen.get_size()[0] // 2 - text.get_size()[0] // 2 - winner.width // 2
-        y = screen.get_size()[1] // 2 - text.get_size()[1] // 2 - winner.width // 2
-        winner.x = text.get_size()[0] + x
-        winner.y = y
-        winner.draw()
+        text = font.render(winner, True, (10, 10, 10))
     else:
         text = font.render("It's a draw!", True, (10, 10, 10))
-        x = screen.get_size()[0] // 2 - text.get_size()[0] // 2
-        y = screen.get_size()[1] // 2 - text.get_size()[1] // 2
 
-    text1 = font.render('Press R to play again', True, (200, 200, 200))
-    x1 = screen.get_size()[0] // 2 - text1.get_size()[0] // 2
+    x = screen.get_size()[0] // 2 - text.get_size()[0] // 2
+    y = screen.get_size()[1] // 2 - text.get_size()[1] // 2
+
+    text_r = font.render('Press R to play again', True, (200, 200, 200))
+    x1 = screen.get_size()[0] // 2 - text_r.get_size()[0] // 2
     y1 = y + text.get_size()[1] + 25
-    screen.blit(text, (x, y))
-    screen.blit(text1, (x1, y1))
-    pygame.display.flip()
 
     rep_loop = True
     while rep_loop:
@@ -116,6 +97,11 @@ def again(winner, lost, kicked):
                 if event.key == pygame.K_r:
                     rep_loop = False
                     repeat = True
+
+        screen.fill((255, 255, 255))
+        screen.blit(text, (x, y))
+        screen.blit(text_r, (x1, y1))
+        pygame.display.flip()
 
 
 ##########################################    Game launch    ##########################################
