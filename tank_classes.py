@@ -69,7 +69,7 @@ class Bullet:
 ##########################################    Tanks    ##########################################
 
 
-max_lifes = 10
+_max_lifes = 10
 
 
 class Tank:
@@ -87,7 +87,7 @@ class Tank:
         self.size = [self.width, self.width]
         self.name = name
         self.txt = small_font.render(str(name), True, (0, 0, 0))
-        self.lifes = max_lifes
+        self.lifes = _max_lifes
         self.score = 0
         self.direction = direction
         self.is_static = True
