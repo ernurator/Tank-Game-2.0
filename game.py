@@ -4,6 +4,7 @@ from helper import screen, clock, FPS, big_font, font, poster, button_sound
 from tank_classes import Button
 from single import single
 from multi import multi
+from multi_auto import autoplay
 #pylint: disable=no-member
 
 
@@ -114,6 +115,7 @@ while repeat:
     menu()
     if gamemode == 's': game_over, winner, lost, kicked = single()
     elif gamemode == 'm': game_over, winner, lost, kicked = multi()
+    elif gamemode == 'a': game_over, winner, lost, kicked = autoplay()
     if game_over: again(winner, lost, kicked)
 
 pygame.quit()
