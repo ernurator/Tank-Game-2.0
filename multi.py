@@ -33,6 +33,7 @@ def multi():
     FIRE_KEY = pygame.K_SPACE
 
     counter = 0
+    seconds = 0
 
     winner = ''
     lost = False
@@ -40,7 +41,8 @@ def multi():
     game_over = False
     mainloop = True
     while mainloop:
-        clock.tick(FPS)
+        millis = clock.tick(FPS)
+        seconds += millis / 1000
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 mainloop = False
@@ -74,7 +76,7 @@ def multi():
 
             drawScoreboard(name, tanks, room)
             for tank in tanks:
-                draw_tank(name, **tank)
+                draw_tank(seconds, name, **tank)
 
             for bullet in bullets:
                 draw_bullet(name, **bullet)

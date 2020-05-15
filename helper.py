@@ -18,6 +18,11 @@ pygame.display.set_caption('Tanks 2D')
 
 # background = pygame.image.load('res/')
 poster = pygame.image.load('res/poster.jpg')
+
+tank_image1 = pygame.image.load('res/tank_1.png')
+tank_image2 = pygame.image.load('res/tank_2.png')
+tank_images = (tank_image1, tank_image2)
+
 wall_image = pygame.image.load('res/wall.png')
 box_image = pygame.image.load('res/box.tga')
 

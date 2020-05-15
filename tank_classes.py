@@ -1,7 +1,7 @@
 import pygame
 from enum import Enum
 import random
-from helper import screen, wall_image, box_image, small_font, shoot_sound
+from helper import screen, wall_image, box_image, small_font, shoot_sound, tank_images
 #pylint: disable=no-member, too-many-function-args
 
 class Direction(Enum):
@@ -82,8 +82,8 @@ class Tank:
         self.power_up = False
         self.color = color
         self.width = width
-        # self.cur_image = 0
-        # self.images = [tank_image1, tank_image2]
+        self.cur_image = 0
+        self.images = tank_images
         self.size = [self.width, self.width]
         self.name = name
         self.txt = small_font.render(str(name), True, (0, 0, 0))
@@ -97,32 +97,25 @@ class Tank:
                     d_up: Direction.UP, d_down: Direction.DOWN}
 
     def draw(self):
-        tank_c = (self.x + self.width // 2, self.y + self.width // 2)
-        # dynamic = tuple(int(i * self.lifes / max_lifes) for i in self.color)
-
-        # body = pygame.Surface((self.width, self.width))
-        # pygame.draw.rect(body, self.color, (0, 0, self.width, self.width))
-        # body.set_colorkey((255, 255, 255))
-        # body.blit(self.images[self.cur_image], (0, 0))
-        # screen.blit(body, (self.x, self.y))
-
-        pygame.draw.rect(screen, self.color, (self.x, self.y, self.width, self.width))
-        pygame.draw.circle(screen, self.color, tank_c, self.width // 2)
-        pygame.draw.circle(screen, (0, 0, 0), tank_c, self.width // 2 - 1, 1)
+        self.cur_image = (self.cur_image + 1) % len(self.images)
+        body = pygame.Surface((self.width, self.width))
+        pygame.draw.rect(body, self.color, (0, 0, self.width, self.width))
+        body.set_colorkey((255, 255, 255))
+        body.blit(self.images[self.cur_image], (0, 0))
 
         if self.direction == Direction.RIGHT:
-            pygame.draw.line(screen, self.color, tank_c, (tank_c[0] + self.width, tank_c[1]), 4)
+            body = pygame.transform.rotate(body, -90)
 
         if self.direction == Direction.LEFT:
-            pygame.draw.line(screen, self.color, tank_c, (tank_c[0] - self.width, tank_c[1]), 4)
+            body = pygame.transform.rotate(body, 90)
 
         if self.direction == Direction.UP:
-            pygame.draw.line(screen, self.color, tank_c, (tank_c[0], tank_c[1] - self.width), 4)
+            body = pygame.transform.rotate(body, 0)
 
         if self.direction == Direction.DOWN:
-            pygame.draw.line(screen, self.color, tank_c, (tank_c[0], tank_c[1] + self.width), 4)
+            body = pygame.transform.rotate(body, 180)
 
-        screen.blit(self.txt, (tank_c[0] - self.txt.get_size()[0] // 2, self.y + self.width + 2))
+        screen.blit(body, (self.x, self.y))
 
     def changeDirection(self, direction):
         self.direction = direction

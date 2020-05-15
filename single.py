@@ -71,7 +71,7 @@ def single():
             # if stay:
             #     tank.is_static = True
 
-        screen.fill((201, 175, 135))  # 225, 235, 250
+        screen.fill((201, 175, 135))
         # screen.blit(background, (0, 0))
         for wall in walls:
             wall.draw()

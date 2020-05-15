@@ -1,5 +1,6 @@
 import pygame
-from helper import screen, font, small_font
+from helper import screen, font, small_font, tank_images
+#pylint: disable=no-member, too-many-function-args
 
 ##########################################    Drawings    ##########################################
 
@@ -23,29 +24,33 @@ def drawScoreboard(name, tanks, room):
     screen.blit(room_text, (900 - room_text.get_size()[0] // 2, screen.get_size()[1] - room_text.get_size()[1] - 10))
 
 
-def draw_tank(name, x, y, id, width, height, direction, **kwargs):
-        tank_c = (x + width // 2, y + height // 2)
+def draw_tank(seconds, name, x, y, id, width, height, direction, **kwargs):
+        # tank_c = (x + width // 2, y + height // 2)
         color = (255, 0, 0) if id == name else (0, 255, 0)
-        pygame.draw.rect(screen, color, (x, y, width, width))
-        pygame.draw.circle(screen, color, tank_c, width // 2)
-        pygame.draw.circle(screen, (0, 0, 0), tank_c, width // 2 - 1, 1)
+        cur_image = int(seconds * 30) % len(tank_images)
+        body = pygame.Surface((width, height))
+        pygame.draw.rect(body, color, (0, 0, width, height))
+        body.set_colorkey((255, 255, 255))
+        body.blit(tank_images[cur_image], (0, 0))
 
         if direction == 'RIGHT':
-            pygame.draw.line(screen, color, tank_c, (tank_c[0] + width, tank_c[1]), 4)
+            body = pygame.transform.rotate(body, -90)
 
         if direction == 'LEFT':
-            pygame.draw.line(screen, color, tank_c, (tank_c[0] - width, tank_c[1]), 4)
+            body = pygame.transform.rotate(body, 90)
 
         if direction == 'UP':
-            pygame.draw.line(screen, color, tank_c, (tank_c[0], tank_c[1] - width), 4)
+            body = pygame.transform.rotate(body, 0)
 
         if direction == 'DOWN':
-            pygame.draw.line(screen, color, tank_c, (tank_c[0], tank_c[1] + width), 4)
+            body = pygame.transform.rotate(body, 180)
+
+        screen.blit(body, (x, y))
 
         txt = small_font.render('You' if id == name else id, True, (0, 0, 0))
-        screen.blit(txt, (tank_c[0] - txt.get_size()[0] // 2, y + width + 2))
+        screen.blit(txt, (x + width // 2 - txt.get_size()[0] // 2, y + width + 2))
 
 
 def draw_bullet(name, x, y, owner, width, height, **kwargs):
-        color = (255, 0, 0) if owner == name else (0, 0, 0)
+        color = (168, 19, 19) if owner == name else (0, 0, 0)
         pygame.draw.rect(screen, color, (x, y, width, height))
