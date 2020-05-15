@@ -108,7 +108,9 @@ def autoplay():
             if len(bullets) > counter: shoot_sound.play(maxtime=1600)
             counter = len(bullets)
 
-            if cur_state['hits']: explosion_sound.play()
+            if room_state.new and cur_state['hits']:
+                room_state.new = False
+                explosion_sound.play()
 
             if next((x for x in cur_state['losers'] if x['tankId'] == name), None):
                 lost = True

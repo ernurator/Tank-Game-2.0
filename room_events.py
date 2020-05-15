@@ -9,6 +9,7 @@ class RoomEvents(Thread):
         self.ready = False
         self.kill = False
         self.response = None
+        self.new = False
 
     def run(self):
         self.credentials = pika.PlainCredentials('dar-tanks', password='5orPLExUYnyVYZg48caMpX')
@@ -27,6 +28,7 @@ class RoomEvents(Thread):
             if self.kill:
                 raise Exception('Consumer thread is killed')
             self.response = json.loads(body)
+            self.new = True
             self.ready = True
 
         self.channel.basic_consume(
