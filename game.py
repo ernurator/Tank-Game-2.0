@@ -77,7 +77,7 @@ def again(winner, lost, kicked):
     elif winner != '':
         text = font.render(winner, True, (10, 10, 10))
     else:
-        text = font.render("It's a draw!", True, (10, 10, 10))
+        text = font.render("Game over", True, (10, 10, 10))
 
     x = screen.get_size()[0] // 2 - text.get_size()[0] // 2
     y = screen.get_size()[1] // 2 - text.get_size()[1] // 2

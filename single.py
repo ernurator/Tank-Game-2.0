@@ -54,6 +54,7 @@ def single():
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_ESCAPE:
                     mainloop = False
+                    game_over = True
                 for tank in tanks:
                     if event.key == tank.fire_key:
                         bullets.append(Bullet(tank))
