@@ -16,7 +16,7 @@ def drawScoreboard(name, tanks, room):
     prev_y = 10 + info_text.get_size()[1]
     for tank in tanks:
         t_name = 'You' if tank['id'] == name else tank['id']
-        score_text = small_font.render(f"{t_name}: {tank['score']}, {tank['health']} lifes", True, (0, 0, 0))
+        score_text = small_font.render("{}: {}, {} lifes".format(t_name, tank['score'], tank['health']), True, (0, 0, 0))
         screen.blit(score_text, (900 - score_text.get_size()[0] // 2, prev_y + 10))
         prev_y += score_text.get_size()[1]
     
