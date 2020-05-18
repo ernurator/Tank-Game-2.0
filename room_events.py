@@ -10,6 +10,7 @@ class RoomEvents(Thread):
         self.kill = False
         self.response = None
         self.new = False
+        self.winners = []
 
     def run(self):
         self.credentials = pika.PlainCredentials('dar-tanks', password='5orPLExUYnyVYZg48caMpX')
@@ -28,6 +29,7 @@ class RoomEvents(Thread):
             if self.kill:
                 raise Exception('Consumer thread is killed')
             self.response = json.loads(body)
+            if self.response['winners']: self.winners = self.response['winners']
             self.new = True
             self.ready = True
 

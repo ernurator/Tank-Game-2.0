@@ -103,6 +103,12 @@ def multi():
                 win_text = 'Congrats! Score: {}. Winner(-s): '.format(cur_state["winners"][0]["score"])
                 winner = win_text + ', '.join(map(lambda i: i['tankId'] if i['tankId'] != name else 'You', cur_state['winners']))
 
+            elif next((x for x in room_state.winners if x['tankId'] == name), None):
+                mainloop = False
+                game_over = True
+                win_text = 'Congrats! Score: {}. Winner(-s): '.format(room_state.winners[0]["score"])
+                winner = win_text + ', '.join(map(lambda i: i['tankId'] if i['tankId'] != name else 'You', room_state.winners))
+
             elif not next((x for x in tanks if x['id'] == name), None):
                 lost = True
                 mainloop = False
