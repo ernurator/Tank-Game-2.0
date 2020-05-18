@@ -135,7 +135,11 @@ class AI:
                 if direction == me['direction']: continue
                 mybullet_rects_turn = new_rects(100, me['x'], me['y'], me['width'], me['height'], direction=direction, seconds=2)
                 for i in range(len(tanks)):
-                    if future_collisions(mybullet_rects_turn, tanks_rects[i]) and max(tanks[i]['y'] - me['y'] - me['height'], -tanks[i]['y'] + me['y'] - tanks[i]['height'], tanks[i]['x'] - me['x'] - me['width'], -tanks[i]['x'] + me['x'] - tanks[i]['width']) > 20:
+                    dist_x1 =  tanks[i]['x'] - me['x'] - me['width']
+                    dist_x2 = -tanks[i]['x'] + me['x'] - tanks[i]['width']
+                    dist_y1 = tanks[i]['y'] - me['y'] - me['height']
+                    dist_y2 = -tanks[i]['y'] + me['y'] - tanks[i]['height']
+                    if future_collisions(mybullet_rects_turn, tanks_rects[i]) and max(dist_x1, dist_x2, dist_y1, dist_y2) > 31:
                         self.turn_direction = direction
                         found = True
                         break
