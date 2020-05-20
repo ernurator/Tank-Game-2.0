@@ -58,7 +58,9 @@ def autoplay():
 
             ai.start(tanks, bullets)
             if ai.fire:
-                rpc_response = rpc.fire()
+                if ai.last_fire + 2 < seconds:
+                    rpc_response = rpc.fire()
+                    ai.last_fire = seconds
                 ai.fire = False
                 ai.last_action = seconds
             if ai.turn_direction:

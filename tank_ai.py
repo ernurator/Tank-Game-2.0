@@ -45,6 +45,7 @@ class AI:
         self.name = name
         self.fire = False
         self.last_action = 0
+        self.last_fire = 0
         self.turn_direction = 'UP'
         self.directions = ['RIGHT', 'LEFT', 'UP', 'DOWN']
 
